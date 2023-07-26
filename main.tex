@@ -864,11 +864,11 @@ Conditional Flow Matching --- это способ выучить ODE, перев
 \]
 Попробуем решить такое стохастическое дифференциальное уравнение. Для этого введем процесс $\hat{Y_t} = a_t \hat{X_t}$, где $a_t$ --- некоторая функция от времени. Нужно понять, какой у $\hat{Y_t}$ дифференциал. Несложно поверить в следующую формулу:
 \[
-    \mathrm{d} \left(a_t \cdot \hat{X_t}\right) = a'_t \cdot X_t \cdot \mathrm{d} t + a_t \cdot \mathrm{d} X_t,
+    \mathrm{d} \left(a_t \cdot \hat{X_t}\right) = \hat{X_t} \cdot a'_t \mathrm{d} t + a_t \cdot \mathrm{d} \hat{X_t},
 \]
-которая просто соответствует производной сложной функции. Тем не менее, если функция будет зависеть еще и от $X_t$, так делать уже будет нельзя. Перепишем дифференциал $Y_t$:
+которая просто соответствует производной произведения. Тем не менее, если функция будет зависеть еще и от $\hat{X_t}$, так делать уже будет нельзя (см. формулу Ито). Перепишем дифференциал $\hat{Y_t}$:
 \[
-    \mathrm{d} Y_t = a'_t \cdot X_t \cdot \mathrm{d} t + a_t \left(\frac{x_1 - \hat{X}_t}{1 - t} \mathrm{d} t + \sqrt{\varepsilon} \mathrm{d} W_t \right) = \left(a'_t \cdot \hat{X_t} + \frac{a_t}{1 - t} (x_1 - \hat{X}_t)\right)\mathrm{d} t + a_t\sqrt{\varepsilon} \mathrm{d} W_t=
+    \mathrm{d} \hat{Y_t} = a'_t \cdot \hat{X_t} \cdot \mathrm{d} t + a_t \left(\frac{x_1 - \hat{X}_t}{1 - t} \mathrm{d} t + \sqrt{\varepsilon} \mathrm{d} W_t \right) = \left(a'_t \cdot \hat{X_t} + \frac{a_t}{1 - t} (x_1 - \hat{X}_t)\right)\mathrm{d} t + a_t\sqrt{\varepsilon} \mathrm{d} W_t=
 \]
 \[
     = \left(a'_t - \frac{a_t}{1-t}\right)\hat{X}_t \mathrm{d} t + \frac{a_t x_1}{1 - t}\mathrm{d} t + a_t \sqrt{\varepsilon}\mathrm{d} W_t
@@ -879,15 +879,15 @@ Conditional Flow Matching --- это способ выучить ODE, перев
 \]
 в частности, $a_t = 1 / (1 - t)$ подойдет. Тогда мы получим
 \[
-    \mathrm{d} Y_t = \frac{x_1}{(1 - t)^2}\mathrm{d} t + \frac{\sqrt{\varepsilon}}{1 - t} \mathrm{d} W_t
+    \mathrm{d} \hat{Y_t} = \frac{x_1}{(1 - t)^2}\mathrm{d} t + \frac{\sqrt{\varepsilon}}{1 - t} \mathrm{d} W_t
 \]
-и $Y_t$ явно выражается:
+и $\hat{Y_t}$ явно выражается:
 \[
-    Y_t = Y_0 + \int \limits_{0}^{t} \frac{x_1\mathrm{d}s}{(1 - s)^2} + \int\limits_{0}^{t} \frac{\sqrt{\varepsilon}}{1 - s} \mathrm{d} W_s = Y_0 + x_1 \cdot \frac{t}{1 - t} + \int\limits_{0}^{t}\frac{\sqrt{\varepsilon}}{1 - s} \mathrm{d} W_s.
+    \hat{Y_t} = \hat{Y_0} + \int \limits_{0}^{t} \frac{x_1\mathrm{d}s}{(1 - s)^2} + \int\limits_{0}^{t} \frac{\sqrt{\varepsilon}}{1 - s} \mathrm{d} W_s = \hat{Y_0} + x_1 \cdot \frac{t}{1 - t} + \int\limits_{0}^{t}\frac{\sqrt{\varepsilon}}{1 - s} \mathrm{d} W_s.
 \]
-Вспоминаем, что $Y_t = X_t / (1 - t)$, а значит, $X_t = (1 - t)Y_t$ и $Y_0 = x_0$. Тогда
+Вспоминаем, что $\hat{Y_t} = \hat{X_t} / (1 - t)$, а значит, $\hat{X_t} = (1 - t)Y_t$ и $\hat{Y}_0 = x_0$. Тогда
 \[
-    X_t = (1 - t) \cdot x_0 + t  \cdot x_1 + (1 - t)\sqrt{\varepsilon}\int\limits_{0}^{t}\frac{1}{1 - s}\mathrm{d}W_s.
+    \hat{X_t} = (1 - t) \cdot x_0 + t  \cdot x_1 + (1 - t)\sqrt{\varepsilon}\int\limits_{0}^{t}\frac{1}{1 - s}\mathrm{d}W_s.
 \]
 Вспоминаем, что интеграл имеет нормальное распределение:
 \[
@@ -895,11 +895,11 @@ Conditional Flow Matching --- это способ выучить ODE, перев
 \]
 а значит, 
 \[
-    (1 - t)\sqrt{\varepsilon}\int\limits_{0}^{t} \frac{1}{1 - s}\mathrm{d} W_s \sim \mathcal{N}\left(0, \frac{(1 - t)^2 \cdot \varepsilon \cdot t}{1 - t}\right) = \mathcal{N}\left(0, \varepsilon \cdot t \cdot (1 - t)\right).
+    (1 - t)\sqrt{\varepsilon}\int\limits_{0}^{t} \frac{1}{1 - s}\mathrm{d} W_s \sim \mathcal{N}\left(0, \frac{(1 - t)^2 \, \varepsilon \, t}{1 - t}\right) = \mathcal{N}\left(0, \varepsilon\, t \,(1 - t)\right).
 \]
 Итого, мы получаем
 \[
-    X_t \sim (1 - t)\cdot x_0 + t \cdot x_1 + \mathcal{N}(0, \varepsilon \cdot t \cdot (1 - t)) = \mathcal{N}\left(t \cdot x_1 + (1 - t) \cdot x_0,\:\: \varepsilon \cdot t \cdot (1 - t)\right).
+    \hat{X_t} \sim (1 - t)\cdot x_0 + t \cdot x_1 + \mathcal{N}(0, \varepsilon \cdot t \cdot (1 - t)) = \mathcal{N}\left(t \cdot x_1 + (1 - t) \cdot x_0,\:\: \varepsilon \cdot t \cdot (1 - t)\right).
 \]
 Таким образом, с точки зрения маргинальных распределений броуновский мост --- ни что иное, как простейший линейный интерполянт $t \cdot x_1 + (1 - t) \cdot x_0$, который разбавляется нормальным шумом с дисперсией вида параболы, зануляющейся на краях. Получается, что такой интерполянт соответствует интерполяции с постепенным зашумлением к середине и расшумлением ближе к концам. Это звучит логично с точки зрения перевода одного изображения в другое: разбавив изображение шумом, мы убьем часть его деталей, а менее детализированное изображение легче видоизменить так, чтобы превратить его в желаемый объект.
 
@@ -928,7 +928,97 @@ Conditional Flow Matching --- это способ выучить ODE, перев
 \]
 Несложно заметить, что здесь тоже появляется некоторая монотонная интерполяция между $x_0$ и $x_1$ в матожидании и выпуклая дисперсия, зануляющаяся на концах. Расписание $\beta_t$ становится важным гиперпараметром, настраивая который можно пытаться улучшить качество.
 
-
+\subsubsection{Обучение SDE на мостах}
+Мы наконец-то переходим к непосредственно обучению модели. Сначала зададим сеттинг: у нас есть, как и во Flow Matching, некоторое распределение $q_{01}(x_0, x_1)$ на парах и условная динамика $p_t(x_t | x_0, x_1)$, которая, на этот раз, задается с помощью SDE
+\[
+    \mathrm{d} \hat{X}_t = f(\hat{X}_t, t | x_0, x_1) \mathrm{d} t + \sqrt{\beta_t} \mathrm{d} W_t.
+\]
+Наша цель --- выучить безусловное векторное поле $f$ такое, что SDE
+\[
+    \mathrm{d} X_t = f(X_t, t) \mathrm{d} t + \sqrt{\beta_t} \mathrm{d} W_t
+\]
+будет задавать безусловную динамику
+\[
+    p_t(x_t) = \int p_t(x_t | x_0, x_1) q_{01}(x_0, x_1) \mathrm{d}x_0 \mathrm{d}x_1,
+\]
+то есть динамику, соответствующую в момент времени $t$ соединению $x_0$ с $x_1$ при помощи некоторого стохастического моста. Напомним, что в случае ODE было справедливо соотношение
+\[
+    f(x, t) = \mathbb{E}\left[f(x_t, t | x_0, x_1) | x_t = x \right] = \int f(x, t | x_0, x_1) \frac{p_t(x | x_0, x_1)q_{01}(x_0, x_1)}{p_t(x)} \mathrm{d} x_0 \mathrm{d} x_1,
+\]
+и доказывалось это тем, полученная по такой формуле $f$ удовлетворяет уравнению непрерывности с $p_t(x)$. Оказывается, что точно такая же формула остается и в случае SDE и доказывается аналогичным образом. Начнем с того, что если динамика $p_t(x | x_0, x_1)$ задается с помощью выписанного выше SDE, то она задается уравнением Фоккера-Планка-Колмогорова
+\[
+    \frac{\partial}{\partial t} p_t(x | x_0, x_1) = - \text{div} \left(p_t(x | x_0, x_1) f(x, t | x_0, x_1) \right) + \frac{\beta_t}{2} \Delta p_t(x).
+\]
+Вспомним, как условная динамика выражается через безусловную и совместим это с Ф-П-К для условной динамики:
+\[
+    \frac{\partial}{\partial t}p_t(x) = \frac{\partial}{\partial t} \int p_t(x | x_0, x_1) q_{01}(x_0, x_1) \mathrm{d} t = \int  \frac{\partial}{\partial t} p_t(x | x_0, x_1) q_{01}(x_0, x_1) \mathrm{d}x_0 \mathrm{d}x_1 = 
+\]
+\[
+    = \int \left(- \text{div}\left(p_t(x | x_0, x_1) f(x, t | x_0, x_1) \right) + \frac{\beta_t}{2} \Delta p_t(x | x_0, x_1) \right) q_{01}(x_0, x_1)\mathrm{d}x_0\mathrm{d}x_1.
+\]
+Раскрываем по линейности на два интеграла, в каждом вспоминаем, что $\text{div}$ и $\Delta$ содержат только производные по $x$, а значит их можно выносить за интеграл:
+\[
+    = -\text{div}\int p_t(x | x_0, x_1) f(x, t | x_0, x_1) q_{01}(x_0, x_1) \mathrm{d} x_0 \mathrm{d} x_1 + \frac{\beta_t}{2} \Delta \int p_t(x | x_0, x_1) q_{01}(x_0, x_1) \mathrm{d} x_0 \mathrm{d} x_1.
+\]
+Замечаем, что под оператором Лапласа стоит не что иное, как безусловная динамика, а под дивергенцией мы пользуемся старым трюком: домножаем и делим на $p_t(x)$. Получаем
+\[
+    - \text{div}\left(p_t(x) \cdot \int f(x, t |x_0, x_1) \frac{p_t(x | x_0, x_1)q_{01}(x_0, x_1)}{p_t(x)} \mathrm{d} x_0 \mathrm{d} x_1 \right) + \frac{\beta_t}{2} \Delta p_t(x).
+\]
+Замечаем, что интеграл внутри дивергенции в точности является заявленным кандидатом на безусловное векторное поле
+\[
+    f(x, t) = \int f(x, t | x_0, x_1)\frac{p_t(x | x_0, x_1)q_{01}(x_0, x_1)}{p_t(x)} \mathrm{d}x_0 \mathrm{d} x_1.
+\]
+Таким образом,
+\[
+    \frac{\partial}{\partial t} p_t(x) = -\text{div}\left(p_t(x) f(x, t)\right) + \frac{\beta_t}{2} \Delta p_t(x),
+\]
+то есть, безусловная динамика удовлетворяет уравнению Фоккера-Планка-Колмогорова с векторным полем $f$ и коэффициентом диффузии $\sqrt{\beta_t}$, а значит, порождается с помощью SDE
+\[
+    \mathrm{d} X_t = f(X_t, t) \mathrm{d} t + \sqrt{\beta_t} \mathrm{d} W_t.
+\]
+Таким образом, остается только выучить безусловное векторное поле $f$, а это можно, как и раньше, сделать с помощью регрессии на условное векторное поле (доказывается как в случае ODE, поэтому пропустим):
+\[
+    \int\limits_{0}^{1} \mathbb{E}_{q_{01}(x_0, x_1)p_t(x_t | x_0, x_1)} \| f_\theta(x_t, t) - f(x_t, t | x_0, x_1) \|^2 \mathrm{d} t \rightarrow \min\limits_{\theta}.
+\]
+Остается один вопрос: откуда нам брать условное векторное поле, соединяющее две точки $x_0$ и $x_1$? А мы этим занимались всю предыдущую секцию: подойдет любой условный процесс, заданный с помощью преобразования Дуба
+\[
+    \mathrm{d} \hat{X}_t =\left(\mu(\hat{X}_t) + \beta_t \nabla_{\hat{X}_t} \log p_{1 | t}(x_1 | \hat{X_t}) \right)\mathrm{d} t + \sqrt{\beta_t} \mathrm{d} W_t.
+\]
+В частности, мы вывели это преобразование для винеровского процесса и получили броуновский мост
+\[
+    \mathrm{d} \hat{X}_t = \beta_t \frac{x_1 - \hat{X}_t}{\overline{\sigma}^2_t} \mathrm{d} t + \sqrt{\beta_t}\mathrm{d} W_t,
+\]
+где $\overline{\sigma}^2_t = \int_t^{1}\beta_s \mathrm{d} s$. Помимо этого, мы еще и вывели распределение такого процесса в момент времени $t$ (а это, как мы помним, условная динамика $p_t(x_t | x_0, x_1)$). Здесь оно равно
+\[
+    p_t(x_t | x_0, x_1) = \mathcal{N}\left(\frac{\sigma^2_t}{\sigma^2_t + \overline{\sigma}^2_t} \cdot x_1 + \frac{\overline{\sigma}^2_t}{\sigma^2_t + \overline{\sigma}^2_t} \cdot x_0, \:\: \frac{\sigma^2_t \overline{\sigma}^2_t}{\sigma^2_t + \overline{\sigma}^2_t} \cdot I  \right),
+\]
+где
+\[
+    \sigma^2_t = \int \limits_{0}^{t} \beta_s \mathrm{d} s, \:\: \overline{\sigma}^2_t = \int \limits_{t}^{1} \beta_s \mathrm{d} s.
+\]
+Тогда алгоритм обучения становится очень простым:
+\begin{enumerate}
+    \item Генерируем пару $(x_0, x_1) \sim q_{01}(x_0, x_1)$;
+    \item Генерируем $t \sim \mathcal{U}[0, 1]$;
+    \item Семплируем интерполяцию $x_t$ из распределения $p_t(x_t | x_0, x_1)$ (выписано выше);
+    \item Подаем пару $(x_t, t)$ на вход нейросети и вычисляем $f_\theta(x_t, t)$;
+    \item Считаем условное векторное поле $\beta_t \cdot (x_1 - x_t) / \overline{\sigma}^2_t$;
+    \item Делаем шаг по антиградиенту
+    \[
+        \nabla_\theta \left\| f_\theta(x_t, t) - \beta_t \frac{x_1 - x_t}{\overline{\sigma}^2_t} \right\|^2.
+    \]
+\end{enumerate}
+На этапе генерации нужно будет семплировать начальную точку $X_0 \sim q_{0}$ и пропускать ее через SDE
+\[
+    \mathrm{d} X_t = f_\theta(X_t, t)\mathrm{d} t + \sqrt{\beta_t}\mathrm{d}W_t,
+\]
+что можно делать, например, по методу Эйлера
+\[
+    X_{t + h} = X_t + h \cdot f_\theta(X_t, t) + \sqrt{h \beta_t} \cdot \varepsilon_t; \:\:\varepsilon_t \sim \mathcal{N}(0, I),
+\]
+а лучше, используя солверы. У полученной модели есть теоретическая гарантия того, что в итоге точка придет в $X_1 \sim q_1$, то есть, мы действительно будем генерировать из целевого распределения. Остаются ли здесь гарантии на уменьшение транспортной цены? Это тяжелый вопрос, возможно позже он будет здесь разобран.
+\subsubsection{Транспортная цена у Bridge Matching}
+[TODO]
 \newpage
 \bibliographystyle{plain}
 \bibliography{references}
