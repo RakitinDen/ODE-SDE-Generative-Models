@@ -5,6 +5,7 @@ The general problem of generative modeling consists of constructing the probabil
 
 There are mainly 3 families of non-diffusion generative models: Generative Adversarial Networks  (GANs)~\cite{goodfellow2014generative}, Variational Autoencoders (VAEs)~\cite{kingma2013auto} and Normalizing Flows (NFs)~\cite{dinh2014nice,rezende2015variational}. Despite different training procedures, all of them share the same simple generation scheme: picture $x$ is obtained by transforming noise $z$ by a trained network $G_\theta$: $x = G_\theta(z)$. In contrast, score-based models do not learn the generator explicitly, but try to approximate the score function of the distribution: $s_\theta(x) \approx \nabla_{x} \log p_{data}(x)$. But why is this statistic valuable?
 
+\subsubsection{Score function}
 First, it can be used for finding mode of the distribution by gradient ascent: if 
 \[
     X_{t + 1} = X_t + \gamma \nabla \log p_{data}(X_t),
@@ -16,10 +17,10 @@ then
 Of course, in general multi-modal case method converges to one of the stationary points of $\log p_{data}(x)$.
 
 Furthermore, it can be used to obtain samples from the distribution using Langevin dynamics~\cite{welling2011bayesian}:
-\[
-    X_{t + 1} = X_t + \gamma \nabla \log p_{data}(X_t) + \sqrt{2 \gamma} \, \varepsilon_t,
-\]
-where $\varepsilon_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. In regular cases, one can prove that 
+\begin{equation}\label{eq:langevin_dynamics}
+    X_{t + 1} = X_t + \gamma \nabla \log p_{data}(X_t) + \sqrt{2 \gamma} \, \eps_t,    
+\end{equation}
+where $\eps_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. In regular cases, one can prove that 
 \[
     p_{X_t} \xrightarrow[t \rightarrow \infty]{} p^{\gamma},
 \]
@@ -28,10 +29,9 @@ where $p^{\gamma}$ is a distribution close to $p_{data}$ that depends on a discr
     p^{\gamma} \xrightarrow[\gamma \rightarrow 0]{} p_{data}.
 \]
 
-
 Given this, score-based models obtain sample from the model by running Langevin dynamics with trained approximation of the score function $s_\theta$ instead of the true one:
 \[
-    X_{t + 1} = X_t + \gamma s_\theta(X_t) + \sqrt{2\gamma}\, \varepsilon_t.
+    X_{t + 1} = X_t + \gamma s_\theta(X_t) + \sqrt{2\gamma}\, \eps_t.
 \]
 
 The only question remained is how to train it. Ideally, we would like to match our approximation with the true score function on the samples from data set and solve the Score Matching objective
@@ -44,15 +44,15 @@ where $X \sim p_{data}$. Unfortunately, this objective has 2 issues:
     \item It is common to assume that such high-dimensional structured data like images lie in a much less-dimensional manifold. In this case, data distribution $p_{data}$ does not have density in a regular sence. Even if the data distribution is not strictly concentrated on a manifold, but is very close, there will be very rapid transitions from zero to high-density regions, which will result in large unstable values of $\nabla \log p_{data}$.
 \end{enumerate}
 
-\subsection{Denoising score matching}
+\subsubsection{Denoising score matching}
 To address the second problem, one can make the data distribution more smooth by, for example, adding gaussian noise:
 \[
-    \hat{X} = X + \sigma \varepsilon,
-    \, \varepsilon \sim \mathcal{N}(0, I),
+    \hat{X} = X + \sigma \eps,
+    \, \eps \sim \mathcal{N}(0, I),
 \]
 or, more generally, deleting part of the object and replacing it with gaussian noise:
 \[
-    \hat{X} = \alpha X + \sigma \varepsilon, \, \varepsilon \sim \mathcal{N}(0, I), \, \alpha < 1.
+    \hat{X} = \alpha X + \sigma \eps, \, \eps \sim \mathcal{N}(0, I), \, \alpha < 1.
 \]
 In terms of distributions, we defined a conditional distribution
 \[
@@ -60,7 +60,7 @@ In terms of distributions, we defined a conditional distribution
 \]
 The perturbed variable $\hat{X}$ always has density, which can be represented as
 \begin{equation}\label{eq:total_density}
-    p_{\hat{X}}(\hat{x}) = \int p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \mathrm{d} x.    
+    p_{\hat{X}}(\hat{x}) = \int p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \rmd x.    
 \end{equation}
 Consequently, it has a score function $\nabla \log p_{\hat{X}}(\hat{x})$, which can be theoretically learned by optimizing the score matching objective
 \[
@@ -74,11 +74,11 @@ The representation of density in the Equation~\ref{eq:total_density} is importan
 \]
 Next, we use the representation of density $p_{\hat{X}}(\hat{x})$ in Eq.~\ref{eq:total_density} and obtain
 \[
-    \frac{\nabla_{\hat{x}}\int p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \mathrm{d} x}{p_{\hat{X}}(\hat{x})} = \frac{\int \nabla_{\hat{x}}\,p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \mathrm{d} x}{p_{\hat{X}}(\hat{x})}.
+    \frac{\nabla_{\hat{x}}\int p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \rmd x}{p_{\hat{X}}(\hat{x})} = \frac{\int \nabla_{\hat{x}}\,p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \rmd x}{p_{\hat{X}}(\hat{x})}.
 \]
 Finally, we apply the reversed log-derivative trick to $\nabla_{\hat{x}} p_{\hat{X} | X}(\hat{x} | x)$ and obtain
 \[
-    \frac{\int \nabla_{\hat{x}}\log p_{\hat{X} | X}(\hat{x} | x) \cdot p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \mathrm{d} x}{p_{\hat{X}}(\hat{x})} = \int \nabla_{\hat{x}}\log p_{\hat{X} | X}(\hat{x} | x) \cdot p_{X | \hat{X}}(x | \hat{x}) \mathrm{d} x,
+    \frac{\int \nabla_{\hat{x}}\log p_{\hat{X} | X}(\hat{x} | x) \cdot p_{\hat{X} | X}(\hat{x} | x)p_{X}(x) \rmd x}{p_{\hat{X}}(\hat{x})} = \int \nabla_{\hat{x}}\log p_{\hat{X} | X}(\hat{x} | x) \cdot p_{X | \hat{X}}(x | \hat{x}) \rmd x,
 \]
 which is just the conditional expectation of the conditional score function. Thereby, we obtained:
 \begin{equation}\label{eq:score_condexp}
@@ -115,7 +115,7 @@ Finally, we arrive at optimizing the objective
 \]
 which minimal value is obtained at the score function of the perturbed data distribution:
 \[
-    s_{\theta^*}(\hat{x}) = \nabla_{\hat{x}} \log p_{\hat{X}}(\hat{x}) = \nabla_{\hat{x}} \log \int p_{data}(x) \mathcal{N}(\hat{x} | \alpha x, \, \sigma^2 I)\mathrm{d} x.
+    s_{\theta^*}(\hat{x}) = \nabla_{\hat{x}} \log p_{\hat{X}}(\hat{x}) = \nabla_{\hat{x}} \log \int p_{data}(x) \mathcal{N}(\hat{x} | \alpha x, \, \sigma^2 I)\rmd x.
 \]
 
 To sample from a trained score-based model, one can just apply Langevin dynamics, which is summarized in the Algorithm~\ref{alg:sampling_score}.
@@ -125,8 +125,8 @@ To sample from a trained score-based model, one can just apply Langevin dynamics
 %\Ensure $X^{(M)}: X^{(M)} \sim p_{X^{(M)}} \approx p_{data}$
 \State $X^{0} \sim p_0$
 \For{$m = 1, \ldots, M$}
-    \State $\varepsilon^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X^{(m - 1)}$
-    \State $X^{(m)} = X^{(m - 1)} + \gamma_m s_\theta(X^{(m - 1)}) + \sqrt{2 \gamma_m}\, \varepsilon^{(m)}$ \Comment{Langevin step}
+    \State $\eps^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X^{(m - 1)}$
+    \State $X^{(m)} = X^{(m - 1)} + \gamma_m s_\theta(X^{(m - 1)}) + \sqrt{2 \gamma_m}\, \eps^{(m)}$ \Comment{Langevin step}
 \EndFor \\
 \Return $X^{(M)}$
 \end{algorithmic}
@@ -134,7 +134,7 @@ To sample from a trained score-based model, one can just apply Langevin dynamics
 
 Formally, we obtained algorithm which allows to sample from a slightly modified data distribution. In theory, one can obtain a very close approximation of $p_{data}$ by setting $\alpha \approx 1$ and $\sigma^2 \approx 0$. In practice, however, one should keep in mind that when they get close to these values, transitions of density become sharp, score function starts to take large values and the training procedure becomes unstable. This leads to a trade-off between precision of the approximation and stability of the model.
 
-\subsection{Noise Conditional Score Networks}
+\subsubsection{Noise Conditional Score Networks}
 To overcome the necessity of choosing $\alpha$ and $\sigma^2$ and balancing between two qualities of the model, authors of~\cite{song2019generative} present a very elegant idea: consider a sequence of modified variables $\{X_t\}_{t = 1}^{T}$ instead of one $\hat{X}$. This sequence of variables will represent a process of gradual noising of the image and cover the whole spectrum of noisy distributions: from sharp distributions close to $p_{data}$ to the pure noise like $\mathcal{N}(0, I)$. Formally, this sequence should possess 3 qualities:
 \begin{enumerate}
     \item The first variable $X_1$ should be close to the data distribution: $p_{X_1} \approx p_{data}$. This will ensure that sampling from $p_{X_1}$ will be almost equivalent to sampling from $p_{data}$;
@@ -143,20 +143,21 @@ To overcome the necessity of choosing $\alpha$ and $\sigma^2$ and balancing betw
 \end{enumerate}
 
 Below, we will use notation of the form $p_t(x_t) := p_{X_t}(x_t)$ or $p_{t | s}(x_t | x_s) := p_{X_t | X_s}(x_t | x_s)$ to make it shorter. Authors consider a so-called variance-exploding (VE) process and define
-\[
-    X_t = X_0 + \sigma^2_t \varepsilon,
-\]
-where $\varepsilon \sim \mathcal{N}(0, I)$ is independent from $X_0$ and $\sigma_t$ is an increasing sequence of variances. Equivalently,
+\begin{equation}\label{eq:ve_process}
+    X_t = X_0 + \sigma^2_t \eps,    
+\end{equation}
+
+where $\eps \sim \mathcal{N}(0, I)$ is independent from $X_0$ and $\sigma_t$ is an increasing sequence of variances. Equivalently,
 \[
     p_{t | 0}(x_t | x_0) = \mathcal{N}(x_t | x_0, \sigma_t^2 I).
 \]
 Taking $\sigma_0 \approx 0$, $\sigma_{t} \approx \sigma_{t + 1}$ and $\sigma_{T}^2$ of such magnitude, that $p_{T} \approx \mathcal{N}(0, \sigma_T^2)$, one ensures to match all the 3 requirements. This sequence of distributions corresponds to adding more and more noise to the original distribution, until it becomes indistinguishable from the pure noise with large magnitude.
 
 The more popular process now is the variance preserving process, which defines a Markov chain
-\[
-    X_{t + 1} = \sqrt{1 - \beta_t} X_t + \sqrt{\beta_t} \varepsilon_t,
-\]
-where $\varepsilon_t \sim \mathcal{N}(0, I)$ is independent from $X_t$. This defines a conditional distribution given previous time step:
+\begin{equation}\label{eq:vp_process}
+    X_{t + 1} = \sqrt{1 - \beta_t} X_t + \sqrt{\beta_t} \eps_t,    
+\end{equation}
+where $\eps_t \sim \mathcal{N}(0, I)$ is independent from $X_t$. This defines a conditional distribution given previous time step:
 \[
     p_{t + 1 | t}(x_{t + 1} | x_t) = \mathcal{N}(x_{t + 1} | \sqrt{1 - \beta_t} x_t, \beta_t I).
 \]
@@ -185,8 +186,8 @@ This model (paired with the sampling Algorithm~\ref{alg:sampling_ncsn}) is calle
 \For{$t = T - 1, \ldots, 1$}
     \State $X_t^{(0)} = X_{t + 1}^{(M)}$
     \For{$m = 1, \ldots, M$} \Comment{Langevin dynamics for $p_t$}
-        \State $\varepsilon_t^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X_t^{(m - 1)}$
-        \State $X_t^{(m)} = X_t^{(m - 1)} + \gamma_m s_\theta(X_t^{(m - 1)}, t) + \sqrt{2 \gamma_m}\, \varepsilon_t^{(m)}$ \Comment{Langevin step}
+        \State $\eps_t^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X_t^{(m - 1)}$
+        \State $X_t^{(m)} = X_t^{(m - 1)} + \gamma_m s_\theta(X_t^{(m - 1)}, t) + \sqrt{2 \gamma_m}\, \eps_t^{(m)}$ \Comment{Langevin step}
     \EndFor
 \EndFor \\
 \Return $X_1^{(M)}$
@@ -197,4 +198,297 @@ We obtained a model with sequential sampling, which needs to use a neural networ
 
 The only major thing that is improved in the newer algorithms is the sampling scheme. It seems like running Langevin dynamics for each time step can be optimized in a way to perform just one step from $t$ to $t - 1$. One of the possible ways to derive such sampling scheme is through stochastic differential equations.
 
-\subsection{Ordinary and stochastic differential equations}
+
+\subsection{Preliminaries on ODEs and SDEs}
+
+\subsubsection{Ordinary differential equations}
+
+Ordinary differential equation, written as
+\[
+    \dot{X} = f(X, t),
+\]
+or, equivalently,
+\begin{equation}
+\label{eq:ode}
+    \mathrm d X_t = f(X_t, t) \rmd t,
+\end{equation}
+defines a set of functions by defining derivative at each point. The most convenient interpretation for us is that $t$ defines time, $X_t$ defines position of a particle at time $t$ and $f(X_t, t)$ represents its velocity vector at time $t$ (physical meaning of the derivative). This interpretation is clearly seen from the Euler scheme, that approximates the solution as:
+\begin{equation}\label{eq:ode_euler}
+    X_{t + h} = X_t + h \dot{X_t} + \overline{o}(h) = X_t + h f(X_t, t) + \overline{o}(h) \approx X_t + h f(X_t, t).
+\end{equation}
+
+
+Euler scheme tells us that position of the particle after small time $h$ can be obtained by moving particle from the current position $X_t$ along its velocity field $f(X_t, t)$ at a distance, proportional to the change in time $h$. This approximate solving scheme will allow us to take a first look at SDEs without heavy theory.
+
+Knowing velocity field is not enough to define a unique trajectory of the particle. We also need to know its initial position. The task of solving system
+\begin{equation}\label{eq:cauchy}
+    \begin{cases}
+        \rmd X_t = f(X_t, t) \rmd t\:;\\
+        X_0 = z
+    \end{cases}
+\end{equation}
+of the differential equation and the initial value is called Cauchy problem or initial value problem.
+
+By adding the initial condition $X_0 = z$, which means that the particle starts moving at the point $z$, we fully defined a physical system. Consequently, we defined a unique trajectory on some time segment. Of course, this is not always the case, but some conditions on the velocity $f(X_t, t)$ guarantee existence and uniqueness of the solution on some time segment $[0, T]$. We will not think about it and will assume existence and uniqueness of the solution.
+
+Euler scheme allows to approximate  continuous-time processes with discrete-time ones. But this connection also works in the opposite: given a discrete-time process, one can construct its continuous-time generalization, calculate its derivative and represent it as a solution of the corresponding ODE. Let's take, for example, the variance-preserving process, defined in the Eq.~\ref{eq:ve_process}, and remove its stochastic part. We will obtain a deterministic process of step-by-step deleting of an object (instead of step-by-step noising):
+\[
+    X_{t + 1} = \sqrt{1 - \beta_t}X_t.
+\]
+The goal is to construct its continuous-time generalization. Let's take now $t \in [0, 1]$, small $h$ and define the connection between $X_t$ and $X_{t + h}$ instead of $X_{t + 1}$. In the original process, coefficient $\beta_t$ defines portion of object that should be deleted after a unit of time. A logical continuous-time generalization is
+\[
+    X_{t + h} = \sqrt{1 - h \beta_t}X_t,
+\]
+which says that the deleted portion of the object is proportional to the time spent. Approximating the square root by Taylor expansion and rearranging terms, we obtain:
+\[
+    \frac{X_{t + h} - X_t}{h} = \frac{1}{h}\left(\sqrt{1 - h\beta_t}X_t - X_t\right) = X_t \frac{1 - \frac{h\beta_t}{2} + \overline{o}(h) - 1}{h} = -\frac{\beta_t}{2} X_t + \overline{o}(1).
+\]
+By taking $h \rightarrow 0$, we see that the continuous-time analogue can be defined as the solution of the ODE
+\begin{equation}\label{eq:ode_delete}
+    \rmd X_t = -\frac{\beta_t}{2} X_t \rmd t,
+\end{equation}
+which is equal to
+\[
+    X_t = X_0 \exp\left(-\frac{1}{2}\int\limits_{0}^{t} \beta_s \rmd s\right),
+\]
+which is itself a very natural way to define a deleting process, especially, when taking constant $\beta_t \equiv \beta$:
+\[
+    X_t = X_0 \exp\left(-\frac{\beta t}{2}\right).
+\]
+
+\subsubsection{Stochastic differential equations: informal}
+
+Stochastic differential equations are far more difficult to define despite their clear physical interpretation. Talking about ODEs, we treated solution of the ODE as a trajectory of the particle that moves under deterministic force. But what if there is also a stochastic force that affects direction of the velocity? This happens, for example, in quantum mechanics, in which some particles move in a purely stochastic way. A natural modification in this case would be to add a stochastic term to the deterministic velocity field and obtain equation of the form
+\[
+    \rmd X_t = f(X_t, t) \rmd t + \text{randomness}.
+\]
+
+In discrete-time one can define a purely stochastic trajectory as a random walk. Let $X_0$ = 0 and $X_1, X_2, \ldots, X_n, \ldots$ be independent variables that define direction of the walk at the corresponding moment: $\mathsf{P}(X_i = 1) = \mathsf{P}(X_i = -1) = 1/2$. Then, position of the random walk at the moment $n$ is $S_n = \sum_{i = 1}^{n} X_i$. This example shows that the <<derivative>> of a random walk, which in discrete time can be naturally defined as $S_{n + 1} - S_{n}$, is just a set of independent variables with $\mathbb{E} \left(S_{n + 1} - S_{n}\right) = 0$ and $\text{Var}\left(S_{n + 1} - S_{n}\right) = 1$.
+
+We would like to define a continuous-time analogue of the random walk and its derivative. Given previous observations, the latter seems to be easier to define: let $(Z_t, t \in [0, 1])$ be a set of independent $\mathcal{N}(0, I)$ variables, which is called a white noise process. Then one can define an equation of the form
+\[
+    \rmd X_t = \left(f(X_t, t) + Z_t\right)\rmd t.
+\]
+Where's the problem? One should integrate the white noise $Z_t$ over time to obtain the trajectory, but $Z_t$ is nowhere continuous and is not integrable. This motivates to construct the continuous-time random walk first.
+
+\begin{definition}
+The continuous-time ($d$-dimensional) random walk is called Wiener process (or process of Brownian motion), is denoted as $W_t$, and posesses 4 properties:
+
+\begin{enumerate}
+    \item $W_0 = 0$;
+    \item $W_t$ is a continuous process;
+    \item It has independent increments: for all time points $t_1 < t_2 < \ldots < t_n$ variables $W_{t_1}, W_{t_2} - W_{t_1}, \ldots, W_{t_n} - W_{t_{n - 1}}$ are independent;
+    \item Increments $W_t - W_s$ are normally distributed $\mathcal{N}(0, (t - s) I)$ variables.
+\end{enumerate}
+\end{definition}
+
+First two properties are clear. Third is the random walk property that tells that the direction of the particle is independent of its current position. Fourth tells that the magnitude of the increments is stationary over time (it only depends on the time difference), which generalizes discrete processes represented as sums of i.i.d. random variables.
+
+Now, given a continuous-time random walk, represented as a Wiener process, one writes a stochastic differential equation as
+\begin{equation}\label{eq:sde_matrix}
+    \rmd X_t = f(X_t, t)\rmd t + G(X_t, t)\rmd W_t,
+\end{equation}
+where $G(x, t)$ is in general case matrix, called the \emph{diffusion matrix}. Most of the time, we will use a scalar \emph{diffusion coefficient} $g(t)$ instead.
+
+But what is the second term formally? The first idea is to say that $\rmd W_t = W'_t \rmd t$. However, Wiener process is almost surely nowhere differentiable, and the previous definition has no sence. One should actually treat this equation in an integral form
+\begin{equation}\label{eq:sde_matrix_int}
+X_t = X_0 + \int\limits_{0}^{t}f(X_s, s)\rmd s + \int\limits_{0}^{t}G(X_s, s)\rmd W_s
+\end{equation}
+and define the latter term (which is called an \emph{Itô integral}) first. However, we will come to this later and now define SDEs by the corresponding discretization scheme. The Euler Scheme, defined in Equation~\ref{eq:ode_euler}, naturally generizes to the Euler-Maruyama scheme for solving SDEs, which we will use as a pseudo-definition:
+\begin{equation}\label{eq:sde_euler_orig}
+    X_{t + h} \approx X_t + h f(X_t, t) + G(X_t, t) (W_{t + h} - W_t)
+\end{equation}
+
+Recursively applying this scheme up to the initial value $X_0$, one can see that $X_t$ can be represented as a function of increments of the Wiener process before time $t$, which are independent with $W_{t + h} - W_t$. Given $W_{t + h} - W_{t} \sim \mathcal{N}(0, h)$, one can rewrite scheme as
+\begin{equation}\label{eq:sde_euelr_maruyama}
+    X_{t + h} \approx X_t + h f(X_t, t) + \sqrt{h}\, G(X_t, t)\eps_t,
+\end{equation}
+where $\eps_t \sim \mathcal{N}(0, I)$ is indepedent with $X_t$. 
+
+Given a pseudo-definition, let's move on to the examples. In Equation~\ref{eq:ode_delete} we defined an ODE, corresponding to a deterministic part of the VP process. Now, armed with a <<definition>> of SDEs, we can finish and construct continuous-time analogue of the entire VP process. As previously, we replace $X_{t + 1}$ with $X_{t + h}$ and $\beta_t$ with $h \beta_t$ and obtain
+\[
+    X_{t + h} = \sqrt{1 - h\beta_t} X_t + \sqrt{h\beta_t} \eps_t,
+\]
+where $\eps_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. As previously, we use Taylor expansion of the square root and obtain
+\[
+    X_{t + h} - X_{t} = -h\frac{\beta_t}{2} X_t + \overline{o}(h) + \sqrt{h\beta_t}\eps_t \approx -h \frac{\beta_t}{2} X_t + \sqrt{h \beta_t} \eps_t.
+\]
+Comparing it to the Euler-Maruyama scheme, one can see that this is a discretization of the SDE
+\begin{equation}\label{eq:vp_sde}
+    \rmd X_t = -\frac{\beta_t}{2} X_t \rmd t + \sqrt{\beta_t} \rmd W_t,
+\end{equation}
+which has many different names: VP-SDE~\cite{song2020score}, Langevin equation, Ornstein-Uhlenbeck process. Regardless of the name, it defines a continuous-time process of a gradual noising of an object.
+
+But didn't we use any stochastic schemes that look like discretization of an SDE? In Equation~\ref{eq:langevin_dynamics} we defined Langevin dynamics:
+\[
+    X_{t + 1} = X_t + \gamma \nabla \log p(X_t) + \sqrt{2 \gamma} \eps_t,
+\]
+where $\eps_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. Denoting neighbour values of the Langevin dynamics as $X_t$ and $X_{t + h}$ and taking step size $\gamma$ at time $t$ equal to $h \beta_t/2$, we have
+\[
+    X_{t + h} = X_t + h\frac{\beta_t}{2} \nabla \log p(X_t) + \sqrt{h \beta_t} \eps_t.
+\]
+As previously, this is an instance of the Euler-Maruyama scheme for the SDE
+\begin{equation}\label{eq:continuous_langevin_dynamics}
+    \rmd X_t = \frac{\beta_t}{2} \nabla \log p(X_t) \rmd t + \sqrt{\beta_t} \rmd W_t,
+\end{equation}
+which is nothing but a continuous-time Langevin dynamics! Actually, the VP-SDE, which we also said to be called Langevin equation, corresponds to the continuous Langevin dynamics for a distribution $p$, which score function is equal to $-x$. This is a standard normal distribution, which automatically explains (in not the most obvious way) why the discrete VP process converges to $\mathcal{N}(0, I)$.
+
+\subsubsection{Continuity equation}
+
+ODEs and SDEs describe evolution of the particle's position over time. One of the fundamental questions that one could ask next is how can we describe evolution of the distribution of the particle? In this section, we will answer this question.
+
+Since SDEs only describe change in the position of the particle, one also needs to define the initial point $X_0$. Here we assume that it is generated from a distribution $p_0$ and $X_0$ is independent with all the noise that comes from the Wiener process. We consider SDEs with scalar diffusion coefficient $g(t)$ and define the corresponding system
+\begin{equation}\label{eq:sde_scalar}
+    \begin{cases}
+        \rmd X_t = f(X_t, t) \rmd t + g(t) \rmd W_t,\\
+        X_0 \sim p_0.
+    \end{cases}
+\end{equation}
+
+Our goal is to describe how the distribution $p_t(x) := p_{X_t}(x)$ of the particle changes in time, which almost always means calculating derivative:
+\[
+    \frac{\partial}{\partial t} p_t(x) = ?
+\]
+Since we work with SDEs through the discretization, the most convenient way to analyze this time-derivative is through the limit:
+\[
+    \frac{\partial}{\partial t} p_t(x) = \lim \limits_{h \rightarrow 0} \frac{1}{h}(p_{t + h}(x) - p_t(x)).
+\]
+Thus, the problem reduces to analyze how density changes after a small time interval. Remember that the variables are connected throught the Euler-Maruyama scheme:
+\[
+    X_{t + h} = X_t + hf(X_t, t) + \sqrt{h} g(t)\, \eps_t,
+\]
+where, as always, $\eps_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. This connection is, in fact, pretty simple: the first ODE part $X_t + h f(X_t, t)$ is nothing but a differentiable function of $X_t$, for which (if it is bijective and the inverse is differentiable) there is a change of variables formula. The second part consists in adding an independent noise, which changes density by a convolution. 
+
+The first part consists of applying the function $\phi(x) = x + h f(x, t)$ to $X_t$. Remember that this is an approximation of the function, which solves ODE forward from time $t$ to time $t + h$. ODE theory says that under regularity conditions this function is bijective (uniqueness of the solution) and differentiable in both directions. This allows us to apply the change of variables formula:
+\[
+    p_{\phi(X_t)}(y) = p_{X_t}(\phi^{-1}(y)) \left| \det \frac{\partial \phi^{-1}}{\partial y} \right|.
+\]
+The same formula applied in the opposite direction gives
+\[
+    p_{X_t}(x) = p_{\phi(X_t)}(\phi(x)) \left| \det \frac{\partial{\phi}}{\partial x} \right|,
+\]
+which will be more convenient to analyze. We substitute $\phi$ and obtain
+\[
+    p_{X_t}(x) = p_{\phi(X_t)}\left(x + h f(x, t)\right) \left|\det \left(I + h \frac{\partial}{\partial x} f(x, t)\right) \right|.
+\]
+Let's simplify the $\det$ term first. We are interested in all terms that are not $\overline{o}(h)$. In the determinant formula for a matrix $A$ one sums terms of the form $\prod_{i = 1}^{d} a_{i \sigma_i}$ over all permutations $\sigma$. If one of the elements is off the diagonal, it has a pair, which gives $h^2$ in product and is $\overline{o}(h)$. This means that the only thing remained is the diagonal term and the whole $\det$ expression is equal
+\[
+    \prod\limits_{i = 1}^{d} \left(1 + h \frac{\partial}{\partial x_i} f_i(x, t)\right) + \overline{o}(h)
+\]
+We see that the only terms that are not $\overline{o}(h)$ after opening brackets are products that contain 0 or 1 $h$. This gives
+\[
+    1 + h \sum\limits_{i = 1}^{d} \frac{\partial}{\partial x_i} f_i(x, t) + \overline{o}(h) = 1 + h\, \div f(x, t) + \overline{o}(h),
+\]
+where $\div$ is the divergence operator, which takes a function $\psi$ and returns $\sum_{i = 1}^{d} \partial_{x_i} \psi_i(x) = \mathrm{Tr}( \partial_x \psi(x))$. Taking small enough $h$, one can obtain a positive value, so taking the absolute value is not necessary.
+
+The density part is even easier to deal with: use the Taylor expansion:
+\[
+    p_{\phi(X_t)}(x + h f(x, t)) = p_{\phi(X_t)}(x) + h\, \Big\langle \nabla p_{\phi(X_t)}(x), \, f(x, t) \Big\rangle + \overline{o}(h).
+\]
+Combining the two parts, we obtain
+
+
+
+\[
+    \left(p_{\phi(X_t)}(x) + h\, \Big\langle \nabla p_{\phi(X_t)}(x), \, f(x, t) \Big\rangle + \overline{o}(h)\right)\cdot \Big(1 + h\, \div f(x, t) + \overline{o}(h)\Big) = 
+\]
+\[
+    = p_{\phi(X_t)}(x) + h \cdot \left(\Big\langle \nabla p_{\phi(X_t)}(x), \, f(x, t) \Big\rangle + p_{\phi(X_t)}(x) \, \div f(x, t)\right) + \overline{o}(h).
+\]
+Expressing scalar product and divergence as sums, we get
+\[
+    p_{\phi(X_t)}(x) + h\sum\limits_{i = 1}^{d}\left( f_i(x, t)\frac{\partial}{\partial x_i} p_{\phi(X_t)}(x) + p_{\phi(X_t)}(x) \frac{\partial}{\partial x_i} f_i(x, t) \right) + \overline{o}(h).
+\]
+Expression under brackets is nothing but a derivative of a product, which gives
+\[
+    p_{\phi(X_t)}(x) + h\sum\limits_{i = 1}^{d} \frac{\partial}{\partial x_i} \left(f_i(x, t) p_{\phi(X_t)}(x)\right) + \overline{o}(h).
+\]
+The sum is the divergence of the product $f(x, t)p_{\phi(X_t)}(x)$, which finally gives
+\begin{equation}\label{eq:phi_density}
+    p_{X_t}(x) = p_{\phi(X_t)}(x) + h\,\div\Big(f(x, t) p_{\phi(X_t)}(x)\Big) + \overline{o}(h).    
+\end{equation}
+Remember that $\phi(X_t) = X_t + h f(X_t, t)$. If we work with ODE, then $\phi(X_t) = X_{t + h}$ and
+\[
+    p_{t}(x) = p_{t + h}(x) + h \, \div\Big(f(x, t) p_{t + h}(x)\Big) + \overline{o}(h),
+\]
+which is equivalent to
+\[
+    \frac{p_{t + h}(x) - p_t(x)}{h} = -\div\Big(f(x, t)p_{t + h}(x)\Big) + \overline{o}(1).
+\]
+Taking the limit, we obtain
+\begin{equation}\label{eq:continuity}
+    \boxed{\frac{\partial}{\partial t} p_t(x) = -\div \Big(f(x, t) p_{t}(x)\Big)}
+\end{equation}
+which is called the \emph{continuity equation} and describes evolution of a particle that moves under ODE.
+
+\subsubsection{Fokker-Planck equation}
+The continuity equation is a very important object which can be investigated separately, but we also need its extension on the SDE case. Previously, we expressed $X_{t + h}$ through the Euler-Maruyama scheme:
+\[
+    X_{t + h} = \phi(X_t) + Y_t,
+\]
+where $Y_t = \sqrt{h} g(t) \, \varepsilon_t$, and found density of $\phi(X_t)$ in the Equation~\ref{eq:phi_density}. Since $\phi(X_t)$ and $Y_t$ are independent, density of $X_{t + h}$ is just a convolution
+\[
+    p_{X_{t + h}}(x) = \int p_{\phi(X_t)}(x - y) p_{Y_t}(y) \rmd y = \E\, p_{\phi(X_t)}\big(x - Y_t\big) = \E\, p_{\phi(X_t)}\big(x - \sqrt{h} g(t)\,\eps_t\big)
+\]
+
+As always, use the Taylor expansion (up to the second term, since $\sqrt{h}^2 = h$):
+\[
+    \E\left(p_{\phi(X_t)}(x) - \Big\langle \nabla p_{\phi(X_t)} (x), \sqrt{h} g(t)\, \eps_t  \Big\rangle + \frac{1}{2} \Big\langle \nabla^2 p_{\phi(X_t)}(x)\, \sqrt{h}g(t)\,\eps_t, \sqrt{h}g(t)\,\eps_t \Big \rangle \right) + 
+\]
+\[
+    + \mathbb{E} \:\overline{o}\Big(h g^2(t) \|\eps_t \|^2\Big).
+\]
+This expression is large but convenient to work with:
+\begin{enumerate}
+    \item The first summand is deterministic, so $\E\, p_{\phi(X_t)}(x) = p_{\phi(X_t)}(x)$;
+    \item The second is a linear function of a zero-mean variable, which is zero:
+    \[
+        \E\, \Big\langle \nabla p_{\phi(X_t)} (x), \sqrt{h} g(t)\, \eps_t  \Big\rangle = \Big\langle \nabla p_{\phi(X_t)} (x), \sqrt{h} g(t)\, \E \eps_t  \Big\rangle = 0
+    \]
+    \item The last term under expectation is $\overline{o}(h)$. By interchanging small-$\overline{o}$ and expectation (which is a very rude operation), we obtain $\overline{o}(h)$.
+\end{enumerate}
+
+Now, we have a much smaller expression
+\[
+    p_{\phi(X_t)}(x) + \E\left(\frac{1}{2} \Big\langle \nabla^2 p_{\phi(X_t)}(x)\, \sqrt{h}g(t)\,\eps_t, \sqrt{h}g(t)\,\eps_t \Big \rangle \right) + \overline{o}(h) = 
+\]
+\[
+    = p_{\phi(X_t)}(x) + \frac{h g^2(t)}{2} \E \,\Big\langle \nabla^2 p_{\phi(X_t)}(x) \eps_t, \eps_t \Big\rangle + \overline{o}(h).
+\]
+
+The term under expectation here is the famous Hutchinson's trace estimator~\cite{hutchinson1989stochastic}. Rewrite it using a trace cyclic property:
+    \[
+        \frac{h g^2(t)}{2} \E \, \Big(\eps_t^{\top} \nabla^2 p_{\phi(X_t)}(x) \eps_t \Big) = \frac{h g^2(t)}{2} \E\, \Tr \Big(\nabla^2 p_{\phi(X_t)}(x) \eps_t \eps_t^\top \Big).
+    \]
+
+Trace is a linear function, which we can interchange with expectation and obtain
+\[
+    \frac{h g^2(t)}{2} \Tr\Big(\nabla^2 p_{\phi(X_t)}(x) \E\, \eps_t \eps_t^\top \Big).
+\]
+
+Finally, since $\E \eps_t \eps_t^\top = \Var \,\eps_t + (\E \eps_t )(\E \eps_t)^\top$ and $\eps_t \sim \mathcal{N}(0, I)$, it is equal to $\Var \, \eps_t = I$. We obtained
+\[
+    p_{X_{t + h}}(x) = p_{\phi(X_t)}(x) + \frac{h g^2(t)}{2} \Tr\Big(\nabla^2 p_{\phi(X_t)}(x)\Big) + \overline{o}(h) =
+\]
+\[
+    = p_{\phi(X_t)}(x) + \frac{h g^2(t)}{2} \Delta p_{\phi(X_t)}(x) + \overline{o}(h),
+\]
+where $\Delta \psi(x) = \sum_{i = 1}^{d} \partial^2_{x_i x_i} \psi(x)$ is the Laplace operator. Rewriting density of $\phi(X_t)$ as we expressed in the Equation~\ref{eq:phi_density}, we obtain
+\[
+    p_{X_{t + h}}(x) = p_{X_t}(x) - h \, \div\Big(f(x, t) p_{\phi(X_t)}(x)\Big) + \frac{h g^2(t)}{2} \Delta p_{\phi(X_t)}(x) +  \overline{o}(h),
+\]
+which is equivalent to
+\[
+    \frac{p_{t + h}(x) - p_{t}(x)}{h} = -\div \Big(f(x, t) p_{\phi(X_t)}(x) \Big) + \frac{g^2(t)}{2} \Delta p_{\phi(X_t)}(x) + \overline{o}(1).
+\]
+Since $\phi(X_t) = X_t + h f(X_t, t) \xrightarrow[h \rightarrow 0]{} X_t$, we take the limit $h \rightarrow 0$ and obtain
+\begin{equation}\label{eq:fokker_planck}
+    \boxed{\frac{\partial}{\partial t} p_t(x) = -\div \Big(f(x, t) p_{t}(x)\Big) + \frac{g^2(t)}{2} \Delta p_t(x)}
+\end{equation}
+which is called the \emph{Fokker-Planck equation} and describes how distribution of the particle, driven by SDE, evolves in time.
+
+
+
+% Второе свойство объясняет использование винеровского процесса в качестве модели случайного блуждания: следующий шаг не зависит от предыдущих шагов, а третье свойство задает некоторый классический способ определить тип шума --- нормальное распределение и его магнитуду, имеющую порядок $\sqrt{t}$ за время $t$ (так как $\mathcal{N}(0, (t - s)I)$ совпадает по распределению с $\sqrt{t - s} \cdot \mathcal{N}(0, I)$).
+
+% Вооружившись винеровским процессом, можно добавить ее производную к правой части уравнения, чтобы получить ту самую <<скорость>>, двигающую частицу в случайном направлении. Проблема тут в том, что винеровский процесс не дифференцируем практически ни в каком разумном смысле (нужно заходить на обобщенные функции, чтобы это сделать), поэтому дальше идет построение интеграла Ито и формальное определение SDE с его помощью. Мы же все это опустим и приведем интуицию.
