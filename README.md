@@ -13,3 +13,4 @@ It uses a modified NeurIPS-2023 style file `neurips_2023.sty`: https://neurips.c
 ## Contents:
 1. Score-based generative models. Noise Conditional Score Networks (NCSN): https://arxiv.org/abs/1907.05600.
 2. ODEs: reminder. SDEs: informal defitnition with Euler-Maruyama scheme. Evolution of the distribution: continuity equation, Fokker-Planck equation.
+3. Construction of the backward SDE. Diffusion models based on SDEs.
