@@ -1,4 +1,4 @@
-\section{Diffusion models} Generally speaking, diffusion models define a process of step-by-step noising of a picture and try to learn the reverse process, which allows to generate new images starting with a pure noise. There are different approaches for formalizing this concept. The earlier score-based models as NCSN~\cite{song2019generative} learn score functions of probability distributions at all noise levels and sample with a consequent Langevin dynamics~\cite{welling2011bayesian} going from larger to smaller noise levels. In \cite{ho2020denoising} the backward denoising process is trained as a latent variable model with a variational distribution on noisy images, corresponding to a forward noising process. Finally, the authors of~\cite{song2020score} consider a continuous-time noising SDE and construct the reverse, which can be seen as a unifying framework for previous approaches. On the one hand, the backward SDE explicitly requires knowing score functions at all noise levels, which is similar to the earlier score-based models. On the other hand, discrete-time sampling schemes from the backward SDE result in a discrete-time process very similar to the one in~\cite{ho2020denoising}. In this section, we will cover the original score-based approach and models, based on SDE.
+\section{Diffusion models} Generally speaking, diffusion models define a process of step-by-step noising of a picture and trying to learn the reverse process, which allows to generate new images starting with a pure noise. There are different approaches for formalizing this concept. The earlier score-based models as NCSN~\cite{song2019generative} learn score functions of probability distributions at all noise levels and sample with a consequent Langevin dynamics~\cite{welling2011bayesian} going from larger to smaller noise levels. In \cite{ho2020denoising} the backward denoising process is trained as a latent variable model with a variational distribution on noisy images, corresponding to a forward noising process. Finally, the authors of~\cite{song2020score} consider a continuous-time noising SDE and construct the reverse, which can be seen as a unifying framework for previous approaches. On the one hand, the backward SDE explicitly requires knowing score functions at all noise levels, which is similar to the earlier score-based models. On the other hand, discrete-time sampling schemes from the backward SDE result in a discrete-time process very similar to the one in~\cite{ho2020denoising}. In this section, we will cover the original score-based approach and models based on SDE.
 
 \subsection{Score-based models}
 The general problem of generative modeling consists of constructing the probabilistic model $p_\theta$ given a data set $X_1, \ldots, X_n \sim p_{data}$ in such a way that $p_\theta \approx p_{data}$. 
@@ -24,7 +24,7 @@ where $\eps_t \sim \mathcal{N}(0, I)$ is independent with $X_t$. In regular case
 \[
     p_{X_t} \xrightarrow[t \rightarrow \infty]{} p^{\gamma},
 \]
-where $p^{\gamma}$ is a distribution close to $p_{data}$ that depends on a discretizarion step and converges to $p_{data}$, when $\gamma$ converges to zero:
+where $p^{\gamma}$ is a distribution close to $p_{data}$ that depends on a discretization step and converges to $p_{data}$, when $\gamma$ converges to zero:
 \[
     p^{\gamma} \xrightarrow[\gamma \rightarrow 0]{} p_{data}.
 \]
@@ -41,7 +41,7 @@ The only question remained is how to train it. Ideally, we would like to match o
 where $X \sim p_{data}$. Unfortunately, this objective has 2 issues:
 \begin{enumerate}
     \item Trivially, we do not know the true score function and cannot compute it to perform regression;
-    \item It is common to assume that such high-dimensional structured data like images lie in a much less-dimensional manifold. In this case, data distribution $p_{data}$ does not have density in a regular sence. Even if the data distribution is not strictly concentrated on a manifold, but is very close, there will be very rapid transitions from zero to high-density regions, which will result in large unstable values of $\nabla \log p_{data}$.
+    \item It is common to assume that such high-dimensional structured data like images lie in a much less-dimensional manifold. In this case, data distribution $p_{data}$ does not have density in a regular sense. Even if the data distribution is not strictly concentrated on a manifold, but is very close, there will be very rapid transitions from zero to high-density regions, which will result in large unstable values of $\nabla \log p_{data}$.
 \end{enumerate}
 
 \subsubsection{Denoising score matching}\label{sec:score_matching}
@@ -68,7 +68,7 @@ Consequently, it has a score function $\nabla \log p_{\hat{X}}(\hat{x})$, which 
 \]
 which is, however, still intractable.
 
-The representation of density in the Equation~\ref{eq:total_density} is important, because it rewrites a complicated density $p_{\hat{X}}$ as an integral of a very easy conditional density $p_{\hat{X} | X}$ with respect to the distribution $p_X$, from which we have a data set of samples. I turns out that the score function of $p_{\hat{X}}$ has a similar representation. To derive it, we start with differentiating logarithm (so-called log-derivative trick):
+The representation of density in the Equation~\ref{eq:total_density} is important, because it rewrites a complicated density $p_{\hat{X}}$ as an integral of a very easy conditional density $p_{\hat{X} | X}$ with respect to the distribution $p_X$, from which we have a data set of samples. It turns out that the score function of $p_{\hat{X}}$ has a similar representation. To derive it, we start with differentiating logarithm (so-called log-derivative trick):
 \[
     \nabla_{\hat{x}} \log p_{\hat{X}}(\hat{x}) = \frac{\nabla_{\hat{x}} p_{\hat{X}}(\hat{x})}{p_{\hat{X}}(\hat{x})}.
 \]
@@ -99,7 +99,7 @@ which means that the objective in Eq.~\ref{eq:score_matching_conexp} is equivale
 
 Surprisingly, by addressing the problem of sharp density transitions, we also implicitly solved the intractability of the objective! The conditional score function is just the score function of the normal distribution, which can be calculated. For $d$-dimensional normal distribution
 \[
-    p_{\hat{X} | X}(\hat{x} | x) = \mathcal{N}(\hat{x} | \alpha x,\, \sigma^2 I) = \frac{1}{(2 \pi \sigma^2)^{d/2}}\exp\left(-\frac{1}{2\sigma^2}\left\| \hat{x} - \alpha x \|^2 \right)\right)
+    p_{\hat{X} | X}(\hat{x} | x) = \mathcal{N}(\hat{x} | \alpha x,\, \sigma^2 I) = \frac{1}{(2 \pi \sigma^2)^{d/2}}\exp\left(-\frac{1}{2\sigma^2}\left\| \hat{x} - \alpha x \right\|^2 \right)
 \]
 log-density is equal to
 \[
@@ -132,7 +132,7 @@ To sample from a trained score-based model, one can just apply Langevin dynamics
 \end{algorithmic}
 \end{algorithm}
 
-Formally, we obtained algorithm which allows to sample from a slightly modified data distribution. In theory, one can obtain a very close approximation of $p_{data}$ by setting $\alpha \approx 1$ and $\sigma^2 \approx 0$. In practice, however, one should keep in mind that when they get close to these values, transitions of density become sharp, score function starts to take large values and the training procedure becomes unstable. This leads to a trade-off between precision of the approximation and stability of the model.
+Formally, we obtained an algorithm which allows one to sample from a slightly modified data distribution. In theory, one can obtain a very close approximation of the $p_{data}$ by setting $\alpha \approx 1$ and $\sigma^2 \approx 0$. In practice, however, one should keep in mind that when they get close to these values, transitions of density become sharp, the score function starts to take large values and the training procedure becomes unstable. This leads to a trade-off between precision of the approximation and stability of the model.
 
 \subsubsection{Noise Conditional Score Networks}
 To overcome the necessity of choosing $\alpha$ and $\sigma^2$ and balancing between two qualities of the model, authors of~\cite{song2019generative} present a very elegant idea: consider a sequence of modified variables $\{X_t\}_{t = 1}^{T}$ instead of one $\hat{X}$. This sequence of variables will represent a process of gradual noising of the image and cover the whole spectrum of noisy distributions: from sharp distributions close to $p_{data}$ to the pure noise like $\mathcal{N}(0, I)$. Formally, this sequence should possess 3 qualities:
@@ -142,7 +142,7 @@ To overcome the necessity of choosing $\alpha$ and $\sigma^2$ and balancing betw
     \item Distributions of $X_t$ and $X_{t + 1}$ should be close to each other. This will make $X_{t + 1}$ a good initialization point for sampling from $p_{X_t}$.
 \end{enumerate}
 
-Below, we will use notation of the form $p_t(x_t) := p_{X_t}(x_t)$ or $p_{t | s}(x_t | x_s) := p_{X_t | X_s}(x_t | x_s)$ to make it shorter. Authors consider a so-called variance-exploding (VE) process and define
+Below, we will use the notation of the form $p_t(x_t) := p_{X_t}(x_t)$ or $p_{t | s}(x_t | x_s) := p_{X_t | X_s}(x_t | x_s)$ to make it shorter. Authors consider a so-called variance-exploding (VE) process and define
 \begin{equation}\label{eq:ve_process}
     X_t = X_0 + \sigma^2_t \eps,    
 \end{equation}
@@ -153,7 +153,7 @@ where $\eps \sim \mathcal{N}(0, I)$ is independent from $X_0$ and $\sigma_t$ is 
 \]
 Taking $\sigma_0 \approx 0$, $\sigma_{t} \approx \sigma_{t + 1}$ and $\sigma_{T}^2$ of such magnitude, that $p_{T} \approx \mathcal{N}(0, \sigma_T^2)$, one ensures to match all the 3 requirements. This sequence of distributions corresponds to adding more and more noise to the original distribution, until it becomes indistinguishable from the pure noise with large magnitude.
 
-The more popular process now is the variance preserving process, which defines a Markov chain
+The more popular process now is the variance preserving (VP) process, which defines a Markov chain
 \begin{equation}\label{eq:vp_process}
     X_{t + 1} = \sqrt{1 - \beta_t} X_t + \sqrt{\beta_t} \eps_t,    
 \end{equation}
@@ -171,7 +171,7 @@ Now, given a sequence of modified distributions with easy conditional distributi
 \[
     \mathbb{E}\|s_\theta(X_t, t) - \nabla \log p_{t | 0}(X_t | X_0) \|^2 \rightarrow \min\limits_{\theta}.
 \]
-In practice, training $T$ neural networks is very inefficient, that is why $s_\theta(x, t)$ is defined as one neural network with two inputs. Besides, scores for different $t$ are connected and the training signal from one time step is beneficial for another. Thus, the final training procdure consists of taking the weighted sum of denoising score matching losses from all the time steps:
+In practice, training $T$ neural networks is very inefficient, that is why $s_\theta(x, t)$ is defined as one neural network with two inputs. Besides, scores for different $t$ are connected, and the training signal from one time step is beneficial for another. Thus, the final training procedure consists of taking the weighted sum of denoising score matching losses from all the time steps:
 \begin{equation}\label{eq:ncsn_training}
     \sum\limits_{t = 1}^{T} \gamma(t) \mathbb{E}\|s_\theta(X_t, t) - \nabla \log p_{t | 0}(X_t | X_0) \|^2 \rightarrow \min\limits_{\theta}.
 \end{equation}
@@ -272,7 +272,7 @@ We would like to define a continuous-time analogue of the random walk and its de
 Where's the problem? One should integrate the white noise $Z_t$ over time to obtain the trajectory, but $Z_t$ is nowhere continuous and is not integrable. This motivates to construct the continuous-time random walk first.
 
 \begin{definition}
-The continuous-time ($d$-dimensional) random walk is called Wiener process (or process of Brownian motion), is denoted as $W_t$, and posesses 4 properties:
+The continuous-time ($d$-dimensional) random walk is called Wiener process (or process of Brownian motion), is denoted as $W_t$, and possesses 4 properties:
 
 \begin{enumerate}
     \item $W_0 = 0$;
@@ -282,7 +282,7 @@ The continuous-time ($d$-dimensional) random walk is called Wiener process (or p
 \end{enumerate}
 \end{definition}
 
-First two properties are clear. Third is the random walk property that tells that the direction of the particle is independent of its current position. Fourth tells that the magnitude of the increments is stationary over time (it only depends on the time difference), which generalizes discrete processes represented as sums of i.i.d. random variables.
+The first two properties are clear. The third is the property of a random walk, stating that the direction of the particle is independent of its current position. The fourth states that the magnitude of the increments is stationary over time (it only depends on the time difference), which generalizes discrete processes represented as sums of i.i.d. random variables.
 
 Now, given a continuous-time random walk, represented as a Wiener process, one writes a stochastic differential equation as
 \begin{equation}\label{eq:sde_matrix}
@@ -290,7 +290,7 @@ Now, given a continuous-time random walk, represented as a Wiener process, one w
 \end{equation}
 where $G(x, t)$ is in general case matrix, called the \emph{diffusion matrix}. Most of the time, we will use a scalar \emph{diffusion coefficient} $g(t)$ instead.
 
-But what is the second term formally? The first idea is to say that $\rmd W_t = W'_t \rmd t$. However, Wiener process is almost surely nowhere differentiable, and the previous definition has no sence. One should actually treat this equation in an integral form
+But what is the second term formally? The first idea is to say that $\rmd W_t = W'_t \rmd t$. However, Wiener process is almost surely nowhere differentiable, and the previous definition has no sense. One should actually treat this equation in an integral form
 \begin{equation}\label{eq:sde_matrix_int}
 X_t = X_0 + \int\limits_{0}^{t}f(X_s, s)\rmd s + \int\limits_{0}^{t}G(X_s, s)\rmd W_s
 \end{equation}
