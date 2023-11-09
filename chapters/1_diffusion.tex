@@ -125,8 +125,8 @@ To sample from a trained score-based model, one can just apply Langevin dynamics
 %\Ensure $X^{(M)}: X^{(M)} \sim p_{X^{(M)}} \approx p_{data}$
 \State $X^{0} \sim p_0$
 \For{$m = 1, \ldots, M$}
-    \State $\eps^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X^{(m - 1)}$
-    \State $X^{(m)} = X^{(m - 1)} + \gamma_m s_\theta(X^{(m - 1)}) + \sqrt{2 \gamma_m}\, \eps^{(m)}$ \Comment{Langevin step}
+    \State $\eps^{(m - 1)} \sim \mathcal{N}(0, I)$ --- independent with $X^{(m - 1)}$
+    \State $X^{(m)} = X^{(m - 1)} + \gamma_m s_\theta(X^{(m - 1)}) + \sqrt{2 \gamma_m}\, \eps^{(m - 1)}$ \Comment{Langevin step}
 \EndFor \\
 \Return $X^{(M)}$
 \end{algorithmic}
@@ -155,17 +155,17 @@ Taking $\sigma_0 \approx 0$, $\sigma_{t} \approx \sigma_{t + 1}$ and $\sigma_{T}
 
 The more popular process now is the variance preserving process, which defines a Markov chain
 \begin{equation}\label{eq:vp_process}
-    X_{t + 1} = \sqrt{1 - \beta_t} X_t + \sqrt{\beta_t} \eps_t,    
+    X_{t + 1} = \sqrt{1 - \beta_{t + 1}} X_t + \sqrt{\beta_{t + 1}} \eps_t,    
 \end{equation}
 where $\eps_t \sim \mathcal{N}(0, I)$ is independent from $X_t$. This defines a conditional distribution given previous time step:
 \[
-    p_{t + 1 | t}(x_{t + 1} | x_t) = \mathcal{N}(x_{t + 1} | \sqrt{1 - \beta_t} x_t, \beta_t I).
+    p_{t + 1 | t}(x_{t + 1} | x_t) = \mathcal{N}(x_{t + 1} | \sqrt{1 - \beta_{t + 1}} x_t, \beta_{t + 1} I).
 \]
 Given this, one can calculate the conditional distribution given the initial variable and obtain~\cite{ho2020denoising}
 \[
     p_{t | 0}(x_t | x_0) = \mathcal{N}(x_t | \alpha_t x_0, \sigma^2_t I),
 \]
-where $\alpha_t = \sqrt{\prod_{s = 1}^{t} (1 - \beta_s)} \rightarrow 0$ and $\sigma^2_t = 1 - \prod_{s = 1}^{t}(1 - \beta_s) \rightarrow 1$ given a proper choice of $\beta_t$. Choosing small enough $\beta_t$ to ensure $p_{t + 1} \approx p_{t}$ and fulfilling $\alpha_T \approx 0$ and $\sigma_T^2 \approx 1$, one will satisfy all the 3 requirements.
+where $\alpha_t = \sqrt{\prod_{s = 1}^{t} (1 - \beta_s)} \rightarrow 0$ and $\sigma^2_t = 1 - \prod_{s = 1}^{t}(1 - \beta_s) = 1 - \alpha_t^2 \rightarrow 1$ given a proper choice of $\beta_t$. Choosing small enough $\beta_t$ to ensure $p_{t + 1} \approx p_{t}$ and fulfilling $\alpha_T \approx 0$ and $\sigma_T^2 \approx 1$, one will satisfy all the 3 requirements.
 
 Now, given a sequence of modified distributions with easy conditional distributions, one can train score for all of them with denoising score matching:
 \[
@@ -186,8 +186,8 @@ This model (paired with the sampling Algorithm~\ref{alg:sampling_ncsn}) is calle
 \For{$t = T - 1, \ldots, 1$}
     \State $X_t^{(0)} = X_{t + 1}^{(M)}$
     \For{$m = 1, \ldots, M$} \Comment{Langevin dynamics for $p_t$}
-        \State $\eps_t^{(m)} \sim \mathcal{N}(0, I)$ --- independent with $X_t^{(m - 1)}$
-        \State $X_t^{(m)} = X_t^{(m - 1)} + \gamma_m s_\theta(X_t^{(m - 1)}, t) + \sqrt{2 \gamma_m}\, \eps_t^{(m)}$ \Comment{Langevin step}
+        \State $\eps_t^{(m - 1)} \sim \mathcal{N}(0, I)$ --- independent with $X_t^{(m - 1)}$
+        \State $X_t^{(m)} = X_t^{(m - 1)} + \gamma_m s_\theta(X_t^{(m - 1)}, t) + \sqrt{2 \gamma_m}\, \eps_t^{(m - 1)}$ \Comment{Langevin step}
     \EndFor
 \EndFor \\
 \Return $X_1^{(M)}$
